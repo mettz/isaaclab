@@ -107,7 +107,7 @@ from isaaclab.envs import (
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
-from isaaclab_rl.skrl import SkrlVecEnvWrapper
+from isaaclab_rl.skrl import SkrlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
@@ -208,6 +208,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, expe
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
+
+    # export policy to onnx/jit
+    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    export_policy_as_jit(runner.agent, path=export_model_dir, filename="policy.pt")
+    export_policy_as_onnx(runner.agent, path=export_model_dir, filename="policy.onnx")
 
     # reset environment
     obs, _ = env.reset()
