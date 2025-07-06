@@ -76,14 +76,24 @@ from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
-from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
+from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper, export_policy_as_onnx
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # PLACEHOLDER: Extension template (do not remove this comment)
+import numpy as np
 
+torch.serialization.add_safe_globals([
+    np.core.multiarray.scalar,
+    np.dtype,
+    np.dtypes.Float32DType,
+    np.dtypes.Float64DType,
+    np.dtypes.Int32DType,
+    np.dtypes.Int64DType,
+    np.dtypes.BoolDType
+])
 
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
@@ -187,6 +197,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent: BasePlayer = runner.create_player()
     agent.restore(resume_path)
     agent.reset()
+
+    # export policy to onnx/jit
+    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    export_policy_as_onnx(agent, path=export_model_dir, filename="policy.onnx")
 
     dt = env.unwrapped.step_dt
 

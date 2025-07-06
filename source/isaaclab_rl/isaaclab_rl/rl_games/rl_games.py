@@ -34,6 +34,9 @@ for RL-Games :class:`Runner` class:
 # needed to import for allowing type-hinting:gym.spaces.Box | None
 from __future__ import annotations
 
+import os
+import copy
+
 import gym.spaces  # needed for rl-games incompatibility: https://github.com/Denys88/rl_games/issues/261
 import gymnasium
 import torch
@@ -411,3 +414,64 @@ class RlGamesGpuEnv(IVecEnv):
             The Gym spaces for the environment.
         """
         return self.env.get_env_info()
+    
+def export_policy_as_onnx(
+    policy: object, path: str, filename="policy.onnx", verbose=False
+):
+    """Export policy into a Torch ONNX file.
+
+    Args:
+        policy: The policy torch module.
+        normalizer: The empirical normalizer module. If None, Identity is used.
+        path: The path to the saving directory.
+        filename: The name of exported ONNX file. Defaults to "policy.onnx".
+        verbose: Whether to print the model summary. Defaults to False.
+    """
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+    policy_exporter = _OnnxPolicyExporter(policy, verbose)
+    policy_exporter.export(path, filename)
+
+class _ActorWrapper(torch.nn.Module):
+    def __init__(self, a2c_network):
+        super().__init__()
+        self.actor_mlp = a2c_network.actor_mlp
+        self.mu = a2c_network.mu
+        self.mu_act = a2c_network.mu_act
+
+    def forward(self, obs):
+        x = self.actor_mlp(obs)
+        x = self.mu(x)
+        x = self.mu_act(x)
+        return x
+
+class _OnnxPolicyExporter(torch.nn.Module):
+    """Exporter of actor-critic into ONNX file."""
+
+    def __init__(self, policy, verbose=False):
+        super().__init__()
+        self.verbose = verbose
+        print(policy.model)
+        # copy policy parameters
+        if hasattr(policy.model, "a2c_network"):
+            self.actor = _ActorWrapper(copy.deepcopy(policy.model.a2c_network))
+        else:
+            raise ValueError("Policy does not have an actor/student module.")
+
+    def forward(self, x):
+        return self.actor(x)
+
+    def export(self, path, filename):
+        self.to("cpu")
+        obs = torch.zeros(1, self.actor.actor_mlp[0].in_features)
+        torch.onnx.export(
+            self,
+            obs,
+            os.path.join(path, filename),
+            export_params=True,
+            opset_version=11,
+            verbose=self.verbose,
+            input_names=["obs"],
+            output_names=["actions"],
+            dynamic_axes={},
+        )
