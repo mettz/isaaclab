@@ -473,5 +473,8 @@ class _OnnxPolicyExporter(torch.nn.Module):
             verbose=self.verbose,
             input_names=["obs"],
             output_names=["actions"],
-            dynamic_axes={},
+            dynamic_axes={
+                "obs": {0: "batch_size"},
+                "actions": {0: "batch_size"},
+            },
         )
