@@ -48,7 +48,7 @@ class _StandalonePolicy(torch.nn.Module):
         self.policy_layer = policy.policy_layer
 
     def forward(self, x):
-        return self.policy_layer(self.actor_container(x))
+        return torch.nn.functional.tanh(self.policy_layer(self.actor_container(x)))
 
 class _TorchPolicyExporter(torch.nn.Module):
     """Exporter of actor-critic into JIT file."""
