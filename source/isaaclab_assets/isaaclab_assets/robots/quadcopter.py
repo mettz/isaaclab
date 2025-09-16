@@ -10,16 +10,19 @@ from __future__ import annotations
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+import os
 
 ##
 # Configuration
 ##
 
+# Resolve local path to the Crazyflie USD next to this file
+_LOCAL_CF2X_USD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cf2x.usd")
+
 CRAZYFLIE_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Bitcraze/Crazyflie/cf2x.usd",
+        usd_path=_LOCAL_CF2X_USD,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=10.0,
