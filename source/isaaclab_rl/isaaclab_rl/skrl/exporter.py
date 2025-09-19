@@ -44,10 +44,13 @@ Helper Classes - Private.
 class _StandalonePolicy(torch.nn.Module):
     def __init__(self, policy):
         super().__init__()
-        self.net_container = policy.net_container
+        # self.net_container = policy.net_container
+        self.actor_container = policy.actor_container
+        self.policy_layer = policy.policy_layer
 
     def forward(self, x):
-        return torch.nn.functional.tanh(self.net_container(x))
+        # return torch.nn.functional.tanh(self.net_container(x))
+        return torch.nn.functional.tanh(self.policy_layer(self.actor_container(x)))
 
 class _TorchPolicyExporter(torch.nn.Module):
     """Exporter of actor-critic into JIT file."""
@@ -92,7 +95,7 @@ class _OnnxPolicyExporter(torch.nn.Module):
 
     def export(self, path, filename):
         self.to("cpu")
-        obs = torch.zeros(1, self.actor.net_container[0].in_features)
+        obs = torch.zeros(1, self.actor.actor_container[0].in_features)
         torch.onnx.export(
             self,
             obs,
